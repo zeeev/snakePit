@@ -1,0 +1,19 @@
+{
+         "samples" : {
+                 "clint" : {
+                 "read_group"   :  "-R '@RG\tID:hi_c_A\tSM:chimp' ",
+                 "reads" : {
+                         "R1" : "/net/eichler/vol18/zevk/great_apes/contig_breaking/clint/hi_c/raw_data/read1.fq.gz",
+                         "R2" : "/net/eichler/vol18/zevk/great_apes/contig_breaking/clint/hi_c/raw_data/read1.fq.gz",
+                         },
+                    },
+           },
+           "local_path"   : "$TMPDIR",
+           "bwa_prefix"   : "bwa mem ",
+           "bwa_special"  : " -t 10 -c 300 -S ",
+           "reference"    : "ref/clint.contigs.quiver.pilon.masked.fasta",
+           "cluster_settings"  : {
+                               "heavy" : "-l h_rt=48:00:00 -l mfree=10G -q eichler-short.q -l disk_free=200G -pe serial 10",
+                               "lite" : "-l h_rt=48:00:00 -l mfree=50G -q eichler-short.q"
+                               }
+}

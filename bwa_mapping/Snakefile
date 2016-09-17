@@ -1,0 +1,36 @@
+shell.prefix("source config.sh; set -eo pipefail ; ")
+
+configfile: "config.json"
+
+import os
+import glob
+import csv
+
+TMP = config["local_path"]
+REF = config["reference"]
+REFI = config["reference"] + ".bwt"
+
+BWA_COMMAND = config["bwa_prefix"] + config["bwa_special"]
+
+SAMPLES=config["samples"].keys()
+
+def _get_reads_by_sample(wildcards):
+    return config["samples"][wildcards.samples]["reads"].values()
+
+def _get_read_group_by_sample(wildcards):
+    return config["samples"][wildcards.samples]["read_group"]
+
+rule salsa   :
+     input   : expand("raw_bam/{samples}.bwa_aln.bam", samples=SAMPLES)
+
+rule burrito :
+     input   : R={REF}, RI={REFI}, READS=_get_reads_by_sample,
+     output  : "raw_bam/{samples}.bwa_aln.bam"
+     params  : sge_opts=config["cluster_settings"]["heavy"], RG=_get_read_group_by_sample
+     shell   : "{BWA_COMMAND} {params.RG} {input.R} {input.READS} | samtools view -Sb > {TMP}/{wildcards.samples}.bam ; rsync  --ignore-existing --bwlimit=50000  {TMP}/{wildcards.samples}.bam {output}"
+
+rule index   :
+     input   : {REF}
+     output  : {REFI}
+     params  : sge_opts=config["cluster_settings"]["lite"]
+     shell   : "bwa index {REF}"
