@@ -1,0 +1,23 @@
+shell.prefix("source config.sh; set -eo pipefail ; ")
+
+configfile: "config.json"
+
+import os
+import glob
+import csv
+
+TARGETS=[line.rstrip('\n') for line in open(config["target_names_file"])]
+BAMS=[line.rstrip('\n') for line in open(config["bam_files"])]
+TMP=config["local_path"]
+SMOOTHER=config["smoother"]
+
+WINDOWS="1000".split()
+
+rule salsa   :
+     input   :  expand("raw_smoothed/{window}/{contig}.{window}.smooth.depth.txt", window=WINDOWS, contig=TARGETS)
+
+rule burrito :
+     input   : BF=expand("{bam}", bam=BAMS), SM={SMOOTHER}, SUM=config["sum_script"]
+     output  : "raw_smoothed/{window}/{contig}.{window}.smooth.depth.txt"
+     params  : sge_opts=config["cluster_settings"]["heavy"]
+     shell   : "samtools depth -aa -r {wildcards.contig} {input.BF} | {input.SUM} > {TMP}/{wildcards.contig}.{wildcards.window}.depth.txt ; {input.SM} -f {TMP}/{wildcards.contig}.{wildcards.window}.depth.txt -w {wildcards.window} -o col3 -s 1000 -t > {TMP}/{wildcards.contig}.{wildcards.window}.smooth.depth.txt ; rsync  --ignore-existing --bwlimit=50000 {TMP}/{wildcards.contig}.{wildcards.window}.smooth.depth.txt {output}"

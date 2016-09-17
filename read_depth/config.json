@@ -1,0 +1,10 @@
+{
+         "sum_script"   : "/net/eichler/vol18/zevk/great_apes/contig_breaking/clint/sum_depth_across.sh",
+        "bam_files"    : "/net/eichler/vol18/zevk/great_apes/contig_breaking/clint/bamfiles.txt",
+        "smoother"     : "/net/eichler/vol8/home/zevk/tools/vcflib/bin/smoother",
+        "local_path"   : "$TMPDIR",
+        "target_names_file" : "/net/eichler/vol18/zevk/great_apes/contig_breaking/clint/target_names.txt",
+        "cluster_settings"  : {
+                            "heavy" : "-l h_rt=48:00:00 -l mfree=10G -q eichler-short.q -l disk_free=10G"
+        }
+}
