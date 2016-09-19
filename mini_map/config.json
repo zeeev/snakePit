@@ -1,0 +1,18 @@
+{
+        "mini_map_bin"      : "/net/eichler/vol8/home/zevk/tools/minimap/minimap",
+        "mini_map_settings" : " -f 0.01 -O -c 25 -g 100000 ",
+        "threads"           : " -t 10 ",
+        "targets" : {
+                  "hg38" : "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta"
+                  },
+        "queries" : {
+                 "clint" : "/net/eichler/vol25/projects/whole_genome_assembly/nobackups/chimp/Drafts/V3.0a-falcon/clint.contigs.quiver.pilon.masked.fasta",
+                 "susie" : "/net/eichler/vol2/eee_shared/assemblies/gorilla/susie/GSMRT3.2/susie3.2.chromosomes.fasta",
+                 "chm13" : "/net/eichler/vol25/projects/whole_genome_assembly/nobackups/chm13/chm13.quivered.fa",
+           },
+           "local_path"   : "$TMPDIR",
+           "cluster_settings"  : {
+                               "heavy" : "-l h_rt=48:00:00 -l mfree=10G -q eichler-short.q -pe serial 10",
+                               "lite" : "-l h_rt=48:00:00 -l mfree=20G -q eichler-short.q"
+                               }
+}

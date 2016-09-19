@@ -1,0 +1,25 @@
+shell.prefix("source config.sh; set -eo pipefail ; ")
+
+configfile: "config.json"
+
+import os
+import glob
+import csv
+
+TMP     = config["local_path"]
+MM_CMD_PRE = config["mini_map_bin"] + config["mini_map_settings"] + config["threads"]
+
+def _get_target_files(wildcards):
+    return config["targets"][wildcards.targets]
+
+def _get_query_files(wildcards):
+        return config["queries"][wildcards.queries]
+
+rule chips   :
+     input   : expand("raw_mini_map_out/q-{queries}.t-{targets}.txt", queries=config["queries"].keys(), targets=config["targets"].keys())
+
+rule salsa   :
+     input   : TARGETS=_get_target_files , QUERIES=_get_query_files , MM=config["mini_map_bin"]
+     output  : "raw_mini_map_out/q-{queries}.t-{targets}.txt"
+     params  : sge_opts=config["cluster_settings"]["heavy"]
+     shell   : "{MM_CMD_PRE} {input.TARGETS} {input.QUERIES} > {output}"
