@@ -14,6 +14,6 @@
            "reference"    : "ref/clint.contigs.quiver.pilon.masked.fasta",
            "cluster_settings"  : {
                                "heavy" : "-l h_rt=48:00:00 -l mfree=10G -q eichler-short.q -l disk_free=200G -pe serial 10",
-                               "lite" : "-l h_rt=48:00:00 -l mfree=50G -q eichler-short.q"
+                               "lite" : "-l h_rt=48:00:00 -l mfree=20G -q eichler-short.q"
                                }
 }

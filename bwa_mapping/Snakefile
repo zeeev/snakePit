@@ -20,10 +20,22 @@ def _get_reads_by_sample(wildcards):
 def _get_read_group_by_sample(wildcards):
     return config["samples"][wildcards.samples]["read_group"]
 
-rule salsa   :
-     input   : expand("raw_bam/{samples}.bwa_aln.bam", samples=SAMPLES)
+rule beer    :
+     input   : expand("sorted_bam/{samples}.bwa_aln.sort.bam.bai", samples=SAMPLES)
 
 rule burrito :
+     input   : "sorted_bam/{samples}.bwa_aln.sort.bam"
+     output  : "sorted_bam/{samples}.bwa_aln.sort.bam.bai"
+     params  : sge_opts=config["cluster_settings"]["lite"]
+     shell   : "samtools index {input}"
+
+rule salsa   :
+     input   : "raw_bam/{samples}.bwa_aln.bam"
+     output  : "sorted_bam/{samples}.bwa_aln.sort.bam"
+     params  : sge_opts=config["cluster_settings"]["heavy"]
+     shell   : "samtools sort --threads 10 -o {output} {input}"
+
+rule chips   :
      input   : R={REF}, RI={REFI}, READS=_get_reads_by_sample,
      output  : "raw_bam/{samples}.bwa_aln.bam"
      params  : sge_opts=config["cluster_settings"]["heavy"], RG=_get_read_group_by_sample
