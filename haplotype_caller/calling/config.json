@@ -1,0 +1,26 @@
+{
+"gatk": "/net/eichler/vol8/home/zevk/tools/GenomeAnalysisTK.jar",
+"gatkn":"GenomeAnalysisTK.jar",
+"ram": "-Xmx25g",
+"annotation": "-A AlleleBalanceBySample -A DepthPerAlleleBySample -A MappingQualityZeroBySample -A StrandBiasBySample -A Coverage -A FisherStrand -A HaplotypeScore -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A ReadPosRankSumTest -A VariantType",
+
+"folder": "/net/eichler/vol20/projects/human_diversity_sequencing/nobackups/C_team_haplotype_caller/raw_calls",
+"bwlimit": "50000",
+"reference": "/net/eichler/vol2/eee_shared/assemblies/hg19/genomestrip_metadata/Homo_sapiens_assembly19/Homo_sapiens_assembly19.fasta",
+"refname": "Homo_sapiens_assembly19.fasta",
+"dict": "/net/eichler/vol2/eee_shared/assemblies/hg19/genomestrip_metadata/Homo_sapiens_assembly19/Homo_sapiens_assembly19.dict",
+"fai": "/net/eichler/vol2/eee_shared/assemblies/hg19/genomestrip_metadata/Homo_sapiens_assembly19/Homo_sapiens_assembly19.fasta.fai",
+"dbsnp" :  "-D /net/eichler/vol2/eee_shared/assemblies/human_1kg_v37/gatk_resource_bundle/dbsnp_138.b37.vcf",
+"analysis": "HaplotypeCaller",
+"emitRefConfidence": "--emitRefConfidence GVCF",
+"minBQ": "--min_base_quality_score 20",
+"cigarFilter": "-rf BadCigar",
+"nct": "-nct 5",
+"standard_min_confidence_threshold_for_calling": "20",
+"indexstrat": "-variant_index_type LINEAR --variant_index_parameter 128000",
+"exclude": "-XL /net/eichler/vol2/eee_shared/assemblies/hg19/snps/regions_to_exclude.intervals",
+"files": {
+"AFR_BantuKenya_HGDP01414_F": "AFR_BantuKenya_HGDP01414_F.bam",
+"AFR_BantuKenya_HGDP01417_M": "AFR_BantuKenya_HGDP01417_M.bam",
+}
+}

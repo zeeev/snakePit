@@ -1,0 +1,68 @@
+shell.prefix("module load java/latest ; ")
+
+configfile: "config.json"
+
+FOLDER=config['folder']
+SAMPLES=config['files'].keys();
+
+HCPARS=["java",
+	      config['ram'],
+	      "-XX:+UseSerialGC",
+	      "-jar",
+	      "$TMPDIR/" + config['gatkn'],
+	      "-T",
+	      config['analysis'],
+	      "-R",
+	      "$TMPDIR/" + config['refname'],
+	      config['indexstrat'],
+	      config['nct'],
+	      config['dbsnp'],
+	      config['emitRefConfidence'],
+	      config['exclude'],
+	      config['annotation'],
+	      config['cigarFilter'],
+	      config['minBQ']
+]
+
+GENOPARS=["java",
+              config['ram'],
+              "-jar",
+              "$TMPDIR/" + config['gatkn'],
+              "-T",
+              config['analysis'],
+              "-R",
+              "$TMPDIR/" + config['refname']
+]
+
+HCCOMMANDS = " ".join(HCPARS)
+
+PREAMBLE =" cd $TMPDIR; "
+PREAMBLE+="rsync -W --bwlimit=" + config['bwlimit'] + " "
+PREAMBLE+= config['gatk'] + " $TMPDIR ; "
+PREAMBLE+="rsync -W --bwlimit=" + config['bwlimit'] + " "
+PREAMBLE+= config['reference'] + " $TMPDIR ; "
+PREAMBLE+="rsync -W --bwlimit=" + config['bwlimit'] + " "
+PREAMBLE+= config['dict'] + " $TMPDIR ; "
+PREAMBLE+="rsync -W --bwlimit=" + config['bwlimit'] + " "
+PREAMBLE+= config['fai'] + " $TMPDIR ; "
+
+CONCLUSION="; rsync -W --bwlimit=" + config['bwlimit'] + " "
+
+rule dummy:
+     input: expand("{fold}/{sample}.gvcf", sample=SAMPLES, fold=FOLDER)
+
+def _get_file_by_sample(wildcards):
+    return config['files'].get(wildcards.sample)
+
+rule haplotypeCaller:
+     message: "INFO: Running haplotype caller."
+     input: _get_file_by_sample, "{FOLDER}/sent.txt"
+     params: sge_opts="-l disk_free=30G -l mfree=5G -pe serial 5 -l h_rt=54:00:00 -q eichler-short.q"
+     output: "{FOLDER}/{sample}.gvcf"
+     shell:  "{PREAMBLE} {HCCOMMANDS} -I {input[0]} -o $TMPDIR/{wildcards.sample}.gvcf {CONCLUSION} $TMPDIR/{wildcards.sample}.gvcf {output}"
+
+rule outputFolder:
+     message: "INFO: Creating output folder."
+     params: sge_opts="-l mfree=1G"
+     output: "{FOLDER}/sent.txt"
+     shell: "mkdir {FOLDER} && touch {output}"
