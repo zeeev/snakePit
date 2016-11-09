@@ -1,0 +1,134 @@
+import operator
+import os
+
+SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
+
+shell.prefix("source config.sh;")
+configfile: "config.json"
+
+SPECIES = config["species"].split(",")
+REFS    = config["reference"].split(",")
+
+def _get_isoseq_file_by_name(wildcards):
+    return config[wildcards.species]['isoseq']
+
+def _get_exons_by_ref(wildcards):
+    return config[wildcards.refs]["exons"]
+
+def _get_db_name_by_ref(wildcards):
+    return config[wildcards.refs]["gmap_db_name"]
+
+def _get_db_by_ref(wildcards):
+    return config[wildcards.refs]["gmap_db"]
+
+def _get_star_by_ref(wildcards):
+    return config[wildcards.refs]["star_index"]
+
+rule collect_isoseq_alignments:
+    input:
+        expand("{refs}_refGenome/{species}.gmap.filtered.sort.split.novel_exons.tbl", species=SPECIES, refs=REFS),
+        expand("{refs}_refGenome/{species}.gmap.filtered.bed", species=SPECIES, refs=REFS)
+
+rule generate_summary_table:
+    input: "{refs}_refGenome/{file}.bed"
+    output: "{refs}_refGenome/{file}.tbl"
+    params: sge_opts="-l mfree=4G -l h_rt=48:00:00"
+    shell:
+        """cat {input} | \
+        awk '$4>10' | \
+        bedtools coverage -a - -b /net/eichler/vol2/eee_shared/assemblies/hg38/wgac/wgac_merged.bed | \
+        bedtools coverage -a - -b /net/eichler/vol2/eee_shared/assemblies/hg38/repeats_and_trf.bed | \
+        cut -f 1,2,3,4,5,9,13 | \
+        bedtools sort | \
+        bedtools intersect -a - -b /net/eichler/vol2/eee_shared/assemblies/hg38/genes/refGene.bed12 -wao | \
+        cut -f 1-7,11 | \
+        bedtools groupby -i - -g 1,2,3,4,5,6,7 -c 8 -o distinct | \
+        bedtools sort | \
+        awk 'BEGIN {{print "#chr\tstart\tend\tisoseq_hits\tlength\tsegdup_frac\trepeat_frac\tgene"}} {{print}}' > {output}"""
+
+rule find_novel_exons:
+    input: "{refs}_refGenome/{file}.bed", reference_exons=_get_exons_by_ref
+    output: "{refs}_refGenome/{file}.novel_exons.bed",
+    params: sge_opts="-l mfree=6G -l h_rt=01:00:00", min_exon_length="10"
+    shell:
+        "bedtools subtract -A -f  0.75  -a {input[0]} -b {input.reference_exons} | perl -lane '$len = ($F[2] - $F[1]) ; print if $len > 20 && ($len % 3 == 0)'  | bedtools merge -c 1 -o count | bedtools sort > {output}"
+
+rule split_and_sort_bam_to_bed:
+    input: "{refs}_refGenome/{file}.bam"
+    output: "{refs}_refGenome/{file}.split.bed"
+    params: sge_opts="-l mfree=16G -l h_rt=48:00:00"
+    shell:
+        "bedtools bamtobed -split -i {input} | bedtools sort > {output}"
+
+rule sort_bam_to_bed:
+    input: "{refs}_refGenome/{file}.bam"
+    output: "{refs}_refGenome/{file}.bed"
+    params: sge_opts="-l mfree=16G -l h_rt=48:00:00"
+    shell:
+        "bedtools bamtobed -i {input} -bed12 -color | bedtools sort > {output}"
+
+rule index_bam:
+    input: "{refs}_refGenome/{file}.bam"
+    output: "{refs}_refGenome/{file}.bam.bai"
+    params: sge_opts="-l mfree=16G -l h_rt=48:00:00"
+    shell:
+        "samtools index {wildcards.file}.bam"
+
+rule sort_bam:
+    input: "{refs}_refGenome/{file}.bam"
+    output: "{refs}_refGenome/{file}.sort.bam"
+    params: sge_opts="-l mfree=16G -l h_rt=48:00:00"
+    shell:
+        "samtools sort {input} {wildcards.refs}_refGenome/{wildcards.file}.sort"
+
+rule sam_to_bam:
+    input: "{refs}_refGenome/{file}.sam"
+    output: "{refs}_refGenome/{file}.bam"
+    params: sge_opts="-l mfree=32G -l h_rt=48:00:00"
+    shell:
+        "samtools view -bS {input} > {output}"
+
+rule filter_isoseq_alignments:
+    input: "{refs}_refGenome/{alignment}.sam"
+    output: "{refs}_refGenome/{alignment}.filtered.sam"
+    params: sge_opts="-l mfree=32G -l h_rt=48:00:00"
+    shell:
+        """samtools view -h {input} | awk '{{if ($0 ~ /^@/) {{print}} else {{for (i=1; i<=NF; i+=1) {{if ($i ~ "NM:i:") {{split($i, a, ":"); if (a[3]/length($10) < 0.2) print}}}}}};  }}' | samtools view -hS - > {output} """
+
+rule align_isoseq_with_gmap:
+    input: isoseq=_get_isoseq_file_by_name
+    output: "{refs}_refGenome/{species}.gmap.sam"
+    params: sge_opts="-l mfree=4G -pe serial 12 -l disk_free=20G -l h_rt=48:00:00", index=_get_db_by_ref, index_name=_get_db_name_by_ref
+    shell: """
+
+        rsync -r --bwlimit=50000 {params.index} $TMPDIR/{params.index_name}
+        /net/eichler/vol5/home/mchaisso/software/bin/gmap -D $TMPDIR/{params.index_name}/ -d {params.index_name} -f samse -n 0 -t 12 {input.isoseq} > $TMPDIR/isoseq.gmap.sam
+        rsync -r --bwlimit=50000 $TMPDIR/isoseq.gmap.sam {output}
+
+        """
+
+rule align_isoseq_with_STAR:
+    input: isoseq=_get_isoseq_file_by_name
+    output: "{refs}_refGenome/{species}.star.sam"
+    params: sge_opts="-l mfree=4G -pe serial 4 -l h_rt=48:00:00", index=_get_star_by_ref
+    shell: """~chrismh/src/STAR/bin/Linux_x86_64/STARlong \
+        --runMode alignReads \
+        --outSAMattributes NH HI NM MD \
+        --readNameSeparator space \
+        --outFilterMultimapScoreRange 1 \
+        --outFilterMismatchNmax 2000 \
+        --scoreGapNoncan -20 \
+        --scoreGapGCAG -4 \
+        --scoreGapATAC -8 \
+        --scoreDelOpen -1 \
+        --scoreDelBase -1 \
+        --scoreInsOpen -1 \
+        --scoreInsBase -1 \
+        --alignEndsType Local \
+        --seedSearchStartLmax 50 \
+        --seedPerReadNmax 100000 \
+        --seedPerWindowNmax 1000 \
+        --alignTranscriptsPerReadNmax 100000 \
+        --alignTranscriptsPerWindowNmax 10000 \
+        --runThreadN 15 \
+        --genomeDir {params.index} --readFilesIn {input.isoseq} > {output}"""
