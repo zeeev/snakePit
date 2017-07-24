@@ -1,0 +1,13 @@
+{
+"juicer_bin" : "/net/eichler/vol8/home/zevk/tools/juicebox/juicer_tools_0.7.0.jar",
+"chr" : "hg38.chr.txt",
+"bin_size" : "50000 1000000 2500000",
+"samples" : {
+"K526" : {
+       "data" : "/net/eichler/vol26/15000/hgdp_scratch/great_ape_hic/PRJNA244860/raw_links/K526.links.hic",
+       },
+"H1": {
+        "data" : "/net/eichler/vol26/15000/hgdp_scratch/great_ape_hic/PRJNA244860/raw_links/H1.links.hic",
+      }
+}
+}

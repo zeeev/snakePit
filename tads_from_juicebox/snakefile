@@ -1,0 +1,57 @@
+shell.prefix("source config.sh; set -eo pipefail ; ")
+
+configfile: "config.json"
+
+def _get_data(wildcards):
+    return config["samples"][wildcards.sample]["data"]
+
+JUICER = config["juicer_bin"]
+CHR=[line.rstrip('\n') for line in open( config["chr"])]
+SAMPLES= config["samples"].keys()
+BINSIZE= config["bin_size"].split()
+
+rule collect:
+     input: expand("final_tads_ends/{sample}.{bin}.txt", sample=SAMPLES, bin=BINSIZE)
+
+
+rule ends:
+     input: "final_tads/{sample}.{bin}.txt"
+     output: "final_tads_ends/{sample}.{bin}.txt"
+     shell: """
+            perl -lane '$start = $F[1] - {wildcards.bin}/20 ; $end = $F[1] + {wildcards.bin}/20; print "@F[0]\\t$start\\t$end"' {input} | perl -lane 'print if $F[1] > 0'  > {output}
+     """
+
+rule merge:
+     input: expand("tads_beds/{{sample}}.{chr}.{{bin}}.txt", chr=CHR, bin=BINSIZE)
+     output: "final_tads/{sample}.{bin}.txt"
+     shell : """
+           cat {input} | sort -k1,1 -k2,2n | uniq > {output}
+     """
+
+rule tads:
+     input: "filt_beds/{sample}.{chr}.{bin}.txt"
+     output: "tads_beds/{sample}.{chr}.{bin}.txt"
+     shell: """
+            perl bed2tads {input} > {output}
+     """
+
+rule filter:
+     input: BEDS="beds/{sample}.{chr}.{bin}.txt", BAD="hg38_low_confidence_regions.bed"
+     output: "filt_beds/{sample}.{chr}.{bin}.txt"
+     shell: """
+     bedtools subtract -A -a {input.BEDS} -b {input.BAD} > {output}
+     """
+
+rule convert:
+     input : "raw/{sample}.{chr}.{bin}.txt"
+     output: "beds/{sample}.{chr}.{bin}.txt"
+     shell: """
+     perl eigen_to_bed {input} > {output}
+     """
+
+rule run:
+     input : hic = _get_data, juicer = JUICER
+     output: "raw/{sample}.{chr}.{bin}.txt"
+     shell : """
+            java -jar {input.juicer} eigenvector KR {input.hic} {wildcards.chr} BP {wildcards.bin} -p | grep -v HiC | grep -v Reading > {output}
+     """
