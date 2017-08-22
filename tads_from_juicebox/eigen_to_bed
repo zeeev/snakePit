@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+my $usage = "
+
+Synopsis:
+
+eigen_to_bed <How the hell do you use this thing>
+
+Description:
+
+No really, how the hell do you use this thing!
+
+";
+
+
+my ($help);
+my $opt_success = GetOptions('help'    => \$help,
+			      );
+
+die $usage if $help || ! $opt_success;
+
+my $file = shift;
+die $usage unless $file;
+open (my $IN, '<', $file) or die "Can't open $file for reading\n$!\n";
+
+my @info = split /\/|\./, $file;
+
+my $step = $info[-2];
+my $chr  = $info[-3];
+
+my $start = 1;
+my $end   = $step;
+
+while (<$IN>) {
+    chomp;
+    print "$chr\t$start\t$end\t$_\n";
+    $start += $step;
+    $end   += $step;
+}
+
+#-----------------------------------------------------------------------------
+#-------------------------------- SUBROUTINES --------------------------------
+#-----------------------------------------------------------------------------
+
+sub {
+
+}
+

@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+my $usage = "
+
+Synopsis:
+
+bed2tads <How the hell do you use this thing>
+
+Description:
+
+No really, how the hell do you use this thing!
+
+";
+
+
+my ($help);
+my $opt_success = GetOptions('help'    => \$help,
+			      );
+
+die $usage if $help || ! $opt_success;
+
+my $file = shift;
+die $usage unless $file;
+open (my $IN, '<', $file) or die "Can't open $file for reading\n$!\n";
+
+my $counter    = 0;
+my $start      = 1;
+my $end        = 1;
+my $last_value = 1;
+
+my @values;
+
+LINE: while (<$IN>) {
+    chomp;
+    my @line = split /\t/, $_;
+    next LINE if $line[-1] =~ /NaN/;
+
+    if($counter == 0){
+        $end = $line[2];
+        $last_value = $line[-1];
+        $counter ++;
+        push @values, $line[-1];
+        next LINE;
+
+    }
+    if($last_value * $line[-1] >= 0){
+        $last_value = $line[-1];
+        $end = $line[2];
+        push @values, $line[-1];
+        next LINE;
+    }
+    else{
+        my $vals = join ",", @values;
+        print "$line[0]\t$start\t$end\t$vals\n";
+        $start = $line[1];
+        $end   = $line[2];
+        @values = ();
+        push @values, $line[-1];
+        $last_value = $line[-1];
+        next LINE;
+    }
+}
+
+#-----------------------------------------------------------------------------
+#-------------------------------- SUBROUTINES --------------------------------
+#-----------------------------------------------------------------------------
+
+sub {
+
+}
+
